@@ -2,7 +2,8 @@
 
 namespace App\Controller;
 
-use App\Entity\Student;
+use App\Entity\User;
+use App\Form\RegisterUserType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -34,8 +35,31 @@ class SecurityController extends Controller
      */
     public function register(Request $request, UserPasswordEncoderInterface $userPasswordEncoder)
     {
+        if ($this->getUser() instanceof UserInterface) {
+            $this->addFlash('positive', 'Ya está registrado');
+
+            return $this->redirectToRoute('homepage');
+        }
+
+        $user = new User();
+        $form = $this->createForm(RegisterUserType::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $password = $userPasswordEncoder->encodePassword($user, $user->getPlainPassword());
+            $user->setPassword($password);
+
+            $em = $this->getDoctrine()->getManager();
+            $em->persist($user);
+            $em->flush();
+
+            $this->addFlash('positive', 'El usuario ha sido registrado con éxito');
+
+            return $this->redirectToRoute('login');
+        }
+
         return $this->render('security/register.html.twig', [
-            'form' => null,
+            'form' => $form->createView(),
         ]);
     }
 }
